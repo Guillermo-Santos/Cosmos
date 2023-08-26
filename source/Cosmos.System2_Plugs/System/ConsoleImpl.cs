@@ -620,7 +620,7 @@ namespace Cosmos.System_Plugs.System
 
         #region Fields
 
-        private static readonly Cosmos.System.Console fallBackConsole = new(null);
+        private static Cosmos.System.Console fallBackConsole => Global.Console;
         private static Encoding consoleOutputEncoding = Encoding.ASCII;
         private static Encoding consoleInputEncoding = Encoding.ASCII;
         private static ConsoleColor foreGround = ConsoleColor.White;
