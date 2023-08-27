@@ -3,6 +3,8 @@ using Cosmos.HAL.Drivers.Video;
 using Cosmos.System.Graphics;
 using Cosmos.System;
 using System.Text;
+using Cosmos.HAL.BlockDevice;
+using Cosmos.System.IO;
 
 namespace Cosmos.System_Plugs.System
 {
@@ -216,9 +218,46 @@ namespace Cosmos.System_Plugs.System
             set => throw new NotImplementedException("Not implemented: set_WindowWidth");
         }
 
+        public static TextReader In => @in ??= GetOrCreateReader();
+
+        public static TextWriter Out => @out ??= CreateOutputWriter(OpenStandardOutput());
+
+        public static TextWriter Error => err ??= CreateOutputWriter(OpenStandardError());
+
+        public static bool IsOutputRedirected => Cosmos.System.Console.IsStdOutRedirected();
+        public static bool IsInputRedirected => Cosmos.System.Console.IsStdInRedirected();
+        public static bool IsErrorRedirected => Cosmos.System.Console.IsStdErrorRedirected();
         #endregion
 
         #region Methods
+        public static Stream OpenStandardInput() => fallBackConsole.OpenStandardInput();
+
+        public static Stream OpenStandardOutput() => fallBackConsole.OpenStandardOutput();
+
+        public static Stream OpenStandardError() => fallBackConsole.OpenStandardError();
+
+        public static void SetIn(TextReader newIn)
+        {
+            ArgumentNullException.ThrowIfNull(newIn, nameof(newIn));
+            newIn = SyncTextReader.GetSynchronizedTextReader(newIn);
+            @in = newIn;
+        }
+
+        public static void SetOut(TextWriter newOut)
+        {
+            ArgumentNullException.ThrowIfNull(newOut, nameof(newOut));
+            @out = newOut;
+        }
+
+        public static void SetError(TextWriter newError)
+        {
+            ArgumentNullException.ThrowIfNull(newError, nameof(newError));
+            err = newError;
+        }
+
+        public static TextReader GetOrCreateReader() => fallBackConsole.GetOrCreateReader();
+
+        public static TextWriter CreateOutputWriter(Stream stream) => fallBackConsole.CreateOutputWriter(stream);
 
         public static void SetBufferSize(int width, int height)
         {
@@ -306,23 +345,7 @@ namespace Cosmos.System_Plugs.System
         // ReadKey() pure CIL
         public static ConsoleKeyInfo ReadKey(bool intercept)
         {
-            var key = KeyboardManager.ReadKey();
-            if (intercept == false && key.KeyChar != '\0')
-            {
-                Write(key.KeyChar);
-            }
-
-            //TODO: Plug HasFlag and use the next 3 lines instead of the 3 following lines
-
-            //bool xShift = key.Modifiers.HasFlag(ConsoleModifiers.Shift);
-            //bool xAlt = key.Modifiers.HasFlag(ConsoleModifiers.Alt);
-            //bool xControl = key.Modifiers.HasFlag(ConsoleModifiers.Control);
-
-            bool xShift = (key.Modifiers & ConsoleModifiers.Shift) == ConsoleModifiers.Shift;
-            bool xAlt = (key.Modifiers & ConsoleModifiers.Alt) == ConsoleModifiers.Alt;
-            bool xControl = (key.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control;
-
-            return new ConsoleKeyInfo(key.KeyChar, key.Key.ToConsoleKey(), xShift, xAlt, xControl);
+            return fallBackConsole.ReadKey(intercept);
         }
 
         public static ConsoleKeyInfo ReadKey()
@@ -330,129 +353,10 @@ namespace Cosmos.System_Plugs.System
             return ReadKey(false);
         }
 
-        public static string ReadLine()
-        {
-            var xConsole = GetConsole();
-            if (xConsole == null)
-            {
-                // for now:
-                return null;
-            }
-            List<char> chars = new(32);
-            KeyEvent current;
-            int currentCount = 0;
-
-            while ((current = KeyboardManager.ReadKey()).Key != ConsoleKeyEx.Enter)
-            {
-                if (current.Key == ConsoleKeyEx.NumEnter)
-                {
-                    break;
-                }
-                //Check for "special" keys
-                if (current.Key == ConsoleKeyEx.Backspace) // Backspace
-                {
-                    if (currentCount > 0)
-                    {
-                        int curCharTemp = GetConsole().X;
-                        chars.RemoveAt(currentCount - 1);
-                        GetConsole().X = GetConsole().X - 1;
-
-                        //Move characters to the left
-                        for (int x = currentCount - 1; x < chars.Count; x++)
-                        {
-                            Write(chars[x]);
-                        }
-
-                        Write(' ');
-
-                        GetConsole().X = curCharTemp - 1;
-
-                        currentCount--;
-                    }
-                    continue;
-                }
-                else if (current.Key == ConsoleKeyEx.LeftArrow)
-                {
-                    if (currentCount > 0)
-                    {
-                        GetConsole().X = GetConsole().X - 1;
-                        currentCount--;
-                    }
-                    continue;
-                }
-                else if (current.Key == ConsoleKeyEx.RightArrow)
-                {
-                    if (currentCount < chars.Count)
-                    {
-                        GetConsole().X = GetConsole().X + 1;
-                        currentCount++;
-                    }
-                    continue;
-                }
-
-                if (current.KeyChar == '\0')
-                {
-                    continue;
-                }
-
-                //Write the character to the screen
-                if (currentCount == chars.Count)
-                {
-                    chars.Add(current.KeyChar);
-                    Write(current.KeyChar);
-                    currentCount++;
-                }
-                else
-                {
-                    //Insert the new character in the correct location
-                    //For some reason, List.Insert() doesn't work properly
-                    //so the character has to be inserted manually
-                    List<char> temp = new();
-
-                    for (int x = 0; x < chars.Count; x++)
-                    {
-                        if (x == currentCount)
-                        {
-                            temp.Add(current.KeyChar);
-                        }
-
-                        temp.Add(chars[x]);
-                    }
-
-                    chars = temp;
-
-                    //Shift the characters to the right
-                    for (int x = currentCount; x < chars.Count; x++)
-                    {
-                        Write(chars[x]);
-                    }
-
-                    GetConsole().X -= chars.Count - currentCount - 1;
-                    currentCount++;
-                }
-            }
-            WriteLine();
-
-            char[] final = chars.ToArray();
-            return new string(final);
-        }
-
         public static void ResetColor()
         {
             BackgroundColor = ConsoleColor.Black;
             ForegroundColor = ConsoleColor.White;
-        }
-
-        public static int Read()
-        {
-            if (KeyboardManager.TryReadKey(out KeyEvent result))
-            {
-                return result.KeyChar;
-            }
-            else
-            {
-                return -1;
-            }
         }
 
         public static void Beep(int frequency, int duration)
@@ -475,152 +379,17 @@ namespace Cosmos.System_Plugs.System
         //TODO: Console uses TextWriter - intercept and plug it instead
         public static void Clear()
         {
-            var xConsole = GetConsole();
-            if (xConsole == null)
-            {
-                // for now:
-                return;
-            }
-            GetConsole().Clear();
+            fallBackConsole.Clear();
         }
-
-        #region WriteLine
-
-        public static void WriteLine() => Write(Environment.NewLine);
-
-        public static void WriteLine(bool aBool) => WriteLine(aBool.ToString());
-
-        public static void WriteLine(char aChar) => WriteLine(aChar.ToString());
-
-        public static void WriteLine(char[] aBuffer) => WriteLine(new string(aBuffer));
-
-        /* Decimal type is not working yet... */
-        //public static void WriteLine(decimal aDecimal) => WriteLine(aDecimal.ToString());
-
-        public static void WriteLine(double aDouble) => WriteLine(aDouble.ToString());
-
-        public static void WriteLine(float aFloat) => WriteLine(aFloat.ToString());
-
-        public static void WriteLine(int aInt) => WriteLine(aInt.ToString());
-
-        public static void WriteLine(long aLong) => WriteLine(aLong.ToString());
-
-        /* Correct behaviour printing null should not throw NRE or do nothing but should print an empty line */
-        public static void WriteLine(object value) => Write((value ?? string.Empty).ToString() + Environment.NewLine);
-
-        public static void WriteLine(string aText) => Write(aText + Environment.NewLine);
-
-        public static void WriteLine(uint aInt) => WriteLine(aInt.ToString());
-
-        public static void WriteLine(ulong aLong) => WriteLine(aLong.ToString());
-
-        public static void WriteLine(string format, object arg0) => WriteLine(string.Format(format, arg0));
-
-        public static void WriteLine(string format, object arg0, object arg1) => WriteLine(string.Format(format, arg0, arg1));
-
-        public static void WriteLine(string format, object arg0, object arg1, object arg2) => WriteLine(string.Format(format, arg0, arg1, arg2));
-
-        public static void WriteLine(string format, params object[] arg) => WriteLine(string.Format(format, arg));
-
-        public static void WriteLine(char[] aBuffer, int aIndex, int aCount)
-        {
-            Write(aBuffer, aIndex, aCount);
-            WriteLine();
-        }
-
-        #endregion
-
-        #region Write
-
-        public static void Write(bool aBool)
-        {
-            Write(aBool.ToString());
-        }
-
-        /*
-         * A .Net character can be effectevily more can one byte so calling the low level Console.Write() will be wrong as
-         * it accepts only bytes, we need to convert it using the specified OutputEncoding but to do this we have to convert
-         * it ToString first
-         */
-        public static void Write(char aChar) => Write(aChar.ToString());
-
-        public static void Write(char[] aBuffer) => Write(aBuffer, 0, aBuffer.Length);
-
-        /* Decimal type is not working yet... */
-        //public static void Write(decimal aDecimal) => Write(aDecimal.ToString());
-
-        public static void Write(double aDouble) => Write(aDouble.ToString());
-
-        public static void Write(float aFloat) => Write(aFloat.ToString());
-
-        public static void Write(int aInt) => Write(aInt.ToString());
-
-        public static void Write(long aLong) => Write(aLong.ToString());
-
-        /* Correct behaviour printing null should not throw NRE or do nothing but should print an empty string */
-        public static void Write(object value) => Write((value ?? string.Empty).ToString());
-
-        public static void Write(string aText)
-        {
-            var xConsole = GetConsole();
-            if (xConsole == null)
-            {
-                // for now:
-                return;
-            }
-
-            byte[] aTextEncoded = consoleOutputEncoding.GetBytes(aText);
-            GetConsole().Write(aTextEncoded);
-        }
-
-        public static void Write(uint aInt) => Write(aInt.ToString());
-
-        public static void Write(ulong aLong) => Write(aLong.ToString());
-
-        public static void Write(string format, object arg0) => Write(string.Format(format, arg0));
-
-        public static void Write(string format, object arg0, object arg1) => Write(string.Format(format, arg0, arg1));
-
-        public static void Write(string format, object arg0, object arg1, object arg2) => Write(string.Format(format, arg0, arg1, arg2));
-
-        public static void Write(string format, params object[] arg) => Write(string.Format(format, arg));
-
-        public static void Write(char[] buffer, int index, int count)
-        {
-            if (buffer == null)
-            {
-                throw new ArgumentNullException(nameof(buffer));
-            }
-            if (index < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(count));
-            }
-            if (buffer.Length - index < count)
-            {
-                throw new ArgumentException();
-            }
-            for (int i = 0; i < count; i++)
-            {
-                Write(buffer[index + i]);
-            }
-        }
-
-        //You'd expect this to be on System.Console wouldn't you? Well, it ain't so we just rely on Write(object value)
-        //public static void Write(byte aByte) {
-        //    Write(aByte.ToString());
-        //}
-
-        #endregion
 
         #endregion
 
         #region Fields
 
         private static Cosmos.System.Console fallBackConsole => Global.Console;
+        private static TextWriter? @out;
+        private static TextWriter? err;
+        private static TextReader? @in;
         private static Encoding consoleOutputEncoding = Encoding.ASCII;
         private static Encoding consoleInputEncoding = Encoding.ASCII;
         private static ConsoleColor foreGround = ConsoleColor.White;
