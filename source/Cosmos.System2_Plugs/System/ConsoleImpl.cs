@@ -225,16 +225,18 @@ namespace Cosmos.System_Plugs.System
         public static TextWriter Error => err ??= CreateOutputWriter(OpenStandardError());
 
         public static bool IsOutputRedirected => Cosmos.System.Console.IsStdOutRedirected();
+
         public static bool IsInputRedirected => Cosmos.System.Console.IsStdInRedirected();
+
         public static bool IsErrorRedirected => Cosmos.System.Console.IsStdErrorRedirected();
         #endregion
 
         #region Methods
-        public static Stream OpenStandardInput() => fallBackConsole.OpenStandardInput();
+        public static Stream OpenStandardInput() => Global.Console.OpenStandardInput();
 
-        public static Stream OpenStandardOutput() => fallBackConsole.OpenStandardOutput();
+        public static Stream OpenStandardOutput() => Global.Console.OpenStandardOutput();
 
-        public static Stream OpenStandardError() => fallBackConsole.OpenStandardError();
+        public static Stream OpenStandardError() => Global.Console.OpenStandardError();
 
         public static void SetIn(TextReader newIn)
         {
@@ -255,9 +257,9 @@ namespace Cosmos.System_Plugs.System
             err = newError;
         }
 
-        public static TextReader GetOrCreateReader() => fallBackConsole.GetOrCreateReader();
+        public static TextReader GetOrCreateReader() => Global.Console.GetOrCreateReader(@in is null);
 
-        public static TextWriter CreateOutputWriter(Stream stream) => fallBackConsole.CreateOutputWriter(stream);
+        public static TextWriter CreateOutputWriter(Stream stream) => Global.Console.CreateOutputWriter(stream);
 
         public static void SetBufferSize(int width, int height)
         {
@@ -279,38 +281,38 @@ namespace Cosmos.System_Plugs.System
         {
             if (width == 40 && height == 25)
             {
-                fallBackConsole.mText.Cols = 40;
-                fallBackConsole.mText.Rows = 25;
+                Global.Console.mText.Cols = 40;
+                Global.Console.mText.Rows = 25;
                 VGAScreen.SetTextMode(VGADriver.TextSize.Size40x25);
             }
             else if (width == 40 && height == 50)
             {
-                fallBackConsole.mText.Cols = 40;
-                fallBackConsole.mText.Rows = 50;
+                Global.Console.mText.Cols = 40;
+                Global.Console.mText.Rows = 50;
                 VGAScreen.SetTextMode(VGADriver.TextSize.Size40x50);
             }
             else if (width == 80 && height == 25)
             {
-                fallBackConsole.mText.Cols = 80;
-                fallBackConsole.mText.Rows = 25;
+                Global.Console.mText.Cols = 80;
+                Global.Console.mText.Rows = 25;
                 VGAScreen.SetTextMode(VGADriver.TextSize.Size80x25);
             }
             else if (width == 80 && height == 50)
             {
-                fallBackConsole.mText.Cols = 80;
-                fallBackConsole.mText.Rows = 50;
+                Global.Console.mText.Cols = 80;
+                Global.Console.mText.Rows = 50;
                 VGAScreen.SetTextMode(VGADriver.TextSize.Size80x50);
             }
             else if (width == 90 && height == 30)
             {
-                fallBackConsole.mText.Cols = 90;
-                fallBackConsole.mText.Rows = 30;
+                Global.Console.mText.Cols = 90;
+                Global.Console.mText.Rows = 30;
                 VGAScreen.SetTextMode(VGADriver.TextSize.Size90x30);
             }
             else if (width == 90 && height == 60)
             {
-                fallBackConsole.mText.Cols = 90;
-                fallBackConsole.mText.Rows = 60;
+                Global.Console.mText.Cols = 90;
+                Global.Console.mText.Rows = 60;
                 VGAScreen.SetTextMode(VGADriver.TextSize.Size90x60);
             }
             else
@@ -318,10 +320,10 @@ namespace Cosmos.System_Plugs.System
                 throw new Exception("Invalid text size.");
             }
 
-            fallBackConsole.Cols = fallBackConsole.mText.Cols;
-            fallBackConsole.Rows = fallBackConsole.mText.Rows;
+            Global.Console.Cols = Global.Console.mText.Cols;
+            Global.Console.Rows = Global.Console.mText.Rows;
 
-            ((HAL.TextScreen)fallBackConsole.mText).UpdateWindowSize();
+            ((HAL.TextScreen)Global.Console.mText).UpdateWindowSize();
 
             Clear();
         }
@@ -339,13 +341,13 @@ namespace Cosmos.System_Plugs.System
 
         private static Cosmos.System.Console GetConsole()
         {
-            return fallBackConsole;
+            return Global.Console;
         }
 
         // ReadKey() pure CIL
         public static ConsoleKeyInfo ReadKey(bool intercept)
         {
-            return fallBackConsole.ReadKey(intercept);
+            return Global.Console.ReadKey(intercept);
         }
 
         public static ConsoleKeyInfo ReadKey()
@@ -379,14 +381,13 @@ namespace Cosmos.System_Plugs.System
         //TODO: Console uses TextWriter - intercept and plug it instead
         public static void Clear()
         {
-            fallBackConsole.Clear();
+            Global.Console.Clear();
         }
 
         #endregion
 
         #region Fields
 
-        private static Cosmos.System.Console fallBackConsole => Global.Console;
         private static TextWriter? @out;
         private static TextWriter? err;
         private static TextReader? @in;
