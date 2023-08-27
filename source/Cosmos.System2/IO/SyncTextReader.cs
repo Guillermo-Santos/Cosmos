@@ -1,7 +1,11 @@
 ﻿using System.IO;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 
 namespace Cosmos.System.IO
 {
+    //Modified to be used on cosmos
     public sealed partial class SyncTextReader : TextReader
     {
         internal readonly TextReader _in;

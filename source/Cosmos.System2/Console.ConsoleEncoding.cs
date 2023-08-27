@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Text;
 
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 namespace Cosmos.System
 {
+    //Modified to be used on cosmos
     public partial class Console
     {
+
         internal sealed class ConsoleEncoding : Encoding
         {
             private readonly Encoding _encoding;

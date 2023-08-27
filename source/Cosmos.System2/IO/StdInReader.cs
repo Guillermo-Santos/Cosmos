@@ -3,9 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+
 #nullable enable
 namespace Cosmos.System.IO
 {
+    // Heavily modified to be used on cosmos
     internal sealed class StdInReader : TextReader
     {
         private readonly StringBuilder _readLineSB; // SB that holds readLine output.  This is a field simply to enable reuse; it's only used in ReadLine.

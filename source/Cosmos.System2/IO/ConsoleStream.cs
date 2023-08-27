@@ -5,6 +5,7 @@ using System.IO;
 // The .NET Foundation licenses this file to you under the MIT license.
 
 
+//Modified to be used on cosmos
 namespace Cosmos.System.IO
 {
     // Provides the platform-agnostic functionality for streams used as console input and output.
