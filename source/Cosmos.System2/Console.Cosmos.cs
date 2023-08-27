@@ -21,8 +21,6 @@ namespace Cosmos.System
 
             public override int Read(Span<byte> buffer) => Global.Console.StdInReader.ReadLine(buffer);
         }
-
-        private int Read(Span<byte> buffer) => throw new NotImplementedException();
     }
 }
 

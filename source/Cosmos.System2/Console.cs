@@ -1,21 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Cosmos.HAL;
+using Cosmos.System.IO;
+using static Cosmos.System.Console;
 
 namespace Cosmos.System
 {
     /// <summary>
     /// Represents the standard console output stream.
     /// </summary>
-    public class Console
+    public partial class Console
     {
         private const byte LineFeed = (byte)'\n';
         private const byte CarriageReturn = (byte)'\r';
         private const byte Tab = (byte)'\t';
         private const byte Space = (byte)' ';
+        private const int ReadBufferSize = 4096;
+        private const int WriteBufferSize = 256;
+
+        private SyncTextReader _stdInReader;
 
         /// <summary>
         /// The underlying X cursor location field.
@@ -97,10 +104,13 @@ namespace Cosmos.System
         /// </summary>
         public void Clear()
         {
-            mText.Clear();
-            mX = 0;
-            mY = 0;
-            UpdateCursor();
+            if (!IsStdOutRedirected())
+            {
+                mText.Clear();
+                mX = 0;
+                mY = 0;
+                UpdateCursor();
+            }
         }
 
         //TODO: This is slow, batch it and only do it at end of updates
@@ -239,6 +249,98 @@ namespace Cosmos.System
             }
         }
 
+        public Stream OpenStandardInput()
+        {
+            return new CosmosConsoleStream(FileAccess.Read);
+        }
+
+        public Stream OpenStandardOutput()
+        {
+            return new CosmosConsoleStream(FileAccess.Write);
+        }
+
+        public Stream OpenStandardError()
+        {
+            return new CosmosConsoleStream(FileAccess.Write);
+        }
+
+        public static bool IsStdInRedirected()
+        {
+
+            return global::System.Console.In switch
+            {
+                null => false,
+                SyncTextReader sync => !sync.IsStdIn,
+                StreamReader streamReader => streamReader.BaseStream is not Console.CosmosConsoleStream,
+                _ => true
+            };
+        }
+
+        public static bool IsStdOutRedirected()
+        {
+            return !(global::System.Console.Out is StreamWriter streamWriter
+                    && streamWriter.BaseStream is Console.CosmosConsoleStream);
+        }
+
+        public static bool IsStdErrorRedirected()
+        {
+            return !(global::System.Console.Error is StreamWriter streamWriter
+                    && streamWriter.BaseStream is Console.CosmosConsoleStream);
+        }
+
+        public TextReader GetOrCreateReader(bool firstTime = false)
+        {
+            if (!firstTime && global::System.Console.IsInputRedirected)
+            {
+                var inputStream = OpenStandardInput();
+                return SyncTextReader.GetSynchronizedTextReader(
+                    inputStream == Stream.Null
+                    ? StreamReader.Null
+                    : new StreamReader(
+                        stream: inputStream,
+                        encoding: global::System.Console.InputEncoding,
+                        detectEncodingFromByteOrderMarks: false,
+                        bufferSize: ReadBufferSize,
+                        leaveOpen: true
+                        ));
+            }
+            else
+            {
+                return StdInReader;
+            }
+        }
+        public TextWriter CreateOutputWriter(Stream outputStream) => outputStream == Stream.Null ?
+               TextWriter.Null :
+               (new StreamWriter(
+                   stream: outputStream,
+                   encoding: global::System.Console.OutputEncoding.RemovePreamble(), // This ensures no prefix is written to the stream.
+                   bufferSize: WriteBufferSize,
+                   leaveOpen: true)
+                {
+                    AutoFlush = true
+                });
+        public ConsoleKeyInfo ReadKey(bool intercept)
+        {
+            if (global::System.Console.IsInputRedirected)
+            {
+                throw new InvalidOperationException("Can not read console keys as input is redirected.");
+            }
+
+            global::System.Console.WriteLine("check passed");
+
+            ConsoleKeyInfo keyInfo = StdInReader.ReadKey(out bool previouslyProcessed);
+
+            if (!intercept && !previouslyProcessed && keyInfo.KeyChar != '\0')
+            {
+                global::System.Console.Write(keyInfo.KeyChar);
+            }
+            return keyInfo;
+        }
+
+        internal SyncTextReader StdInReader => _stdInReader ??= SyncTextReader
+                    .GetSynchronizedTextReader(new StdInReader(global::System.Console.InputEncoding));
+
+
         /// <summary>
         /// Get or sets the visibility of the cursor.
         /// </summary>
@@ -246,6 +348,17 @@ namespace Cosmos.System
         {
             get => mText.GetCursorVisible();
             set => mText.SetCursorVisible(value);
+        }
+    }
+    internal static class EncodingExtensions
+    {
+        public static Encoding RemovePreamble(this Encoding encoding)
+        {
+            if (encoding.Preamble.Length == 0)
+            {
+                return encoding;
+            }
+            return new ConsoleEncoding(encoding);
         }
     }
 }
