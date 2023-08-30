@@ -18,8 +18,8 @@ namespace Cosmos.System
             {
             }
 
-            public override void Flush() { global::System.Console.SetCursorPosition(Global.Console.X, Global.Console.Y); }
-            public override void Write(ReadOnlySpan<byte> buffer) => Global.Console.Write(buffer.ToArray());
+            public override void Flush() => Global.Console.UpdateCursorFromCache();
+            public override void Write(ReadOnlySpan<byte> buffer) => Global.Console.Write(buffer);
 
             public override int Read(Span<byte> buffer) => Global.Console.StdInReader.ReadLine(buffer);
         }
