@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 
 // Licensed to the .NET Foundation under one or more agreements.
@@ -102,6 +103,7 @@ namespace Cosmos.System.IO
                     {
                         if (freshKeys)
                         {
+                            //Global.Console.UpdateCursorFromCache();
                             global::System.Console.WriteLine();
                         }
                         return true;
@@ -131,17 +133,15 @@ namespace Cosmos.System.IO
                                     currentCount--;
                                     _readLineSB.Remove(currentCount, 1);
                                     //_readLineSB[currentCount] = '\0';
-                                    var tempX = Global.Console.X;
+                                    //var tempX = Global.Console.X;
+
                                     Global.Console.X--;
+
                                     //Move characters to the left
-                                    for (int x = currentCount; x < _readLineSB.Length; x++)
-                                    {
-                                        global::System.Console.Write(_readLineSB[x]);
-                                    }
-
-                                    global::System.Console.Write('\0');
-
-                                    Global.Console.X = tempX - 1;
+                                    /* We write directly to the TextScreen to only update console cursor once */
+                                    Global.Console.Write(encoding.GetBytes(_readLineSB.ToString(currentCount, _readLineSB.Length - currentCount)));
+                                    Global.Console.Write(encoding.GetBytes("\0")[0]);
+                                    //Global.Console.X = tempX - 1;
                                 }
                                 continue;
                             }
@@ -171,6 +171,7 @@ namespace Cosmos.System.IO
                     if (currentCount == _readLineSB.Length)
                     {
                         _readLineSB.Append(current.KeyChar);
+
                         global::System.Console.Write(current.KeyChar);
                         currentCount++;
                     }
@@ -179,11 +180,8 @@ namespace Cosmos.System.IO
                         _readLineSB.Insert(currentCount, current.KeyChar);
 
                         //Shift the characters to the right
-                        for (int x = currentCount; x < _readLineSB.Length; x++)
-                        {
-                            global::System.Console.Write(_readLineSB[x]);
-                        }
-
+                        /* We write directly to the TextScreen to only update console cursor once */
+                        Global.Console.Write(encoding.GetBytes(_readLineSB.ToString(currentCount, _readLineSB.Length - currentCount)));
                         Global.Console.X -= _readLineSB.Length - currentCount - 1;
                         currentCount++;
                     }
