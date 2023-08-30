@@ -28,6 +28,10 @@ namespace Cosmos.System
         /// The underlying X cursor location field.
         /// </summary>
         protected int mX = 0;
+        /// <summary>
+        /// The underlying Cached X cursor location field.
+        /// </summary>
+        protected int cX = 0;
 
         /// <summary>
         /// The text cursor location in the X (horizontal) axis.
@@ -37,8 +41,46 @@ namespace Cosmos.System
             get => mX;
             set
             {
-                mX = value;
+                if (value < 0)
+                {
+                    if (mY > 0)
+                    {
+                        mY--;
+                    }
+
+                    mX = Cols - 1;
+                }
+                else
+                {
+
+                    mX = value;
+                }
                 UpdateCursor();
+            }
+        }
+
+        /// <summary>
+        /// The text cached cursor location in the X (horizontal) axis.
+        /// </summary>
+        public int CachedX
+        {
+            get => cX;
+            set
+            {
+                if (value < 0)
+                {
+                    if (cY > 0)
+                    {
+                        cY--;
+                    }
+
+                    cX = Rows - 1;
+                }
+                else
+                {
+
+                    cX = value;
+                }
             }
         }
 
@@ -46,6 +88,10 @@ namespace Cosmos.System
         /// The underlying Y cursor location field.
         /// </summary>
         protected int mY = 0;
+        /// <summary>
+        /// The underlying Cached Y cursor location field
+        /// </summary>
+        protected int cY = 0;
 
         /// <summary>
         /// Get and set cursor location on Y axis.
@@ -55,9 +101,15 @@ namespace Cosmos.System
             get => mY;
             set
             {
-                mY = value;
+                mY = value < 0 ? 0 : value;
                 UpdateCursor();
             }
+        }
+
+        public int CachedY
+        {
+            get => cY;
+            set => cY = value < 0 ? 0 : value;
         }
 
         /// <summary>
@@ -107,8 +159,7 @@ namespace Cosmos.System
             if (!IsStdOutRedirected())
             {
                 mText.Clear();
-                mX = 0;
-                mY = 0;
+                cX = cY = mX = mY = 0;
                 UpdateCursor();
             }
         }
@@ -119,7 +170,16 @@ namespace Cosmos.System
         /// </summary>
         protected void UpdateCursor()
         {
+            cX = mX;
+            cY = mY;
             mText.SetCursorPos(mX, mY);
+        }
+
+        public void UpdateCursorFromCache()
+        {
+            mX = cX;
+            mY = cY;
+            UpdateCursor();
         }
 
         /// <summary>
@@ -127,14 +187,14 @@ namespace Cosmos.System
         /// </summary>
         private void DoLineFeed()
         {
-            mY++;
-            mX = 0;
-            if (mY == mText.Rows)
+            cY++;
+            cX = 0;
+            if (cY == mText.Rows)
             {
                 mText.ScrollUp();
-                mY--;
+                cY--;
             }
-            UpdateCursor();
+            //UpdateCursor();
         }
 
         /// <summary>
@@ -143,8 +203,8 @@ namespace Cosmos.System
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DoCarriageReturn()
         {
-            mX = 0;
-            UpdateCursor();
+            cX = 0;
+            //UpdateCursor();
         }
 
         /// <summary>
@@ -165,13 +225,18 @@ namespace Cosmos.System
         /// <param name="aChar">A char to write</param>
         public void Write(byte aChar)
         {
-            mText[mX, mY] = aChar;
-            mX++;
-            if (mX == mText.Cols)
+            Write(aChar, cX, cY);
+        }
+
+        public void Write(byte aChar, int left, int top)
+        {
+            mText[left, top] = aChar;
+            cX++;
+            if (cX == mText.Cols)
             {
                 DoLineFeed();
             }
-            UpdateCursor();
+            //UpdateCursor();
         }
 
         //TODO: Optimize this
@@ -181,7 +246,7 @@ namespace Cosmos.System
         /// </summary>
         /// <param name="aText">The byte array to write to the console.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Write(byte[] aText)
+        public void Write(ReadOnlySpan<byte> aText)
         {
             if (aText == null)
             {
@@ -211,7 +276,6 @@ namespace Cosmos.System
                 }
             }
         }
-
         /// <summary>
         /// The foreground color of the displayed text.
         /// </summary>
@@ -266,10 +330,9 @@ namespace Cosmos.System
 
         public static bool IsStdInRedirected()
         {
-
             return global::System.Console.In switch
             {
-                null => false,
+                null => false /* only used on create, if GetOrCreateReader is changed then this may be not needed */,
                 SyncTextReader sync => !sync.IsStdIn,
                 StreamReader streamReader => streamReader.BaseStream is not Console.CosmosConsoleStream,
                 _ => true
@@ -290,6 +353,7 @@ namespace Cosmos.System
 
         public TextReader GetOrCreateReader(bool firstTime = false)
         {
+            // TODO: Is this really needed for a OS? StdInReader will always be the Standard Input anyway
             if (!firstTime && global::System.Console.IsInputRedirected)
             {
                 var inputStream = OpenStandardInput();

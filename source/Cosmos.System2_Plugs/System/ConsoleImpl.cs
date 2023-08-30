@@ -268,8 +268,9 @@ namespace Cosmos.System_Plugs.System
 
         public static void SetCursorPosition(int left, int top)
         {
-            CursorLeft = left;
-            CursorTop = top;
+            Global.Console.CachedX = left;
+            Global.Console.CachedY = top;
+            Global.Console.UpdateCursorFromCache();
         }
 
         public static void SetWindowPosition(int left, int top)
