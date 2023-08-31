@@ -14,16 +14,14 @@ namespace Cosmos.System.IO
     // Heavily modified to be used on cosmos
     internal sealed class StdInReader : TextReader
     {
-        private readonly StringBuilder _readLineSB; // SB that holds readLine output.  This is a field simply to enable reuse; it's only used in ReadLine.
-        private readonly Stack<KeyEvent> _tmpKeys = new Stack<KeyEvent>(); // temporary working stack; should be empty outside of ReadLine
-        private readonly Stack<KeyEvent> _availableKeys = new Stack<KeyEvent>(); // a queue of already processed key infos available for reading
+        private readonly StringBuilder readLineSB; // SB that holds readLine output.  This is a field simply to enable reuse; it's only used in ReadLine.
+        private readonly Stack<KeyEvent> tmpKeys = new Stack<KeyEvent>(); // temporary working stack; should be empty outside of ReadLine
+        private readonly Stack<KeyEvent> availableKeys = new Stack<KeyEvent>(); // a queue of already processed key infos available for reading
         private readonly Encoding encoding;
-        private const int BytesToBeRead = 1024; // No. of bytes to be read from the stream at a time.
-        private List<string> _keys;
+
         internal StdInReader(Encoding encoding)
         {
-            _readLineSB = new StringBuilder();
-            //_keys = new List<string>(BytesToBeRead); 
+            readLineSB = new StringBuilder();
             this.encoding = encoding;
         }
 
@@ -32,10 +30,10 @@ namespace Cosmos.System.IO
         /// </summary>
         public ConsoleKeyInfo ReadKey(out bool previouslyProcessed)
         {
-            if (_availableKeys.Count > 0)
+            if (availableKeys.Count > 0)
             {
                 previouslyProcessed = true;
-                var key = _availableKeys.Pop();
+                var key = availableKeys.Pop();
 
                 bool xShift = (key.Modifiers & ConsoleModifiers.Shift) == ConsoleModifiers.Shift;
                 bool xAlt = (key.Modifiers & ConsoleModifiers.Alt) == ConsoleModifiers.Alt;
@@ -68,10 +66,10 @@ namespace Cosmos.System.IO
         {
             bool isEnter = ReadLineCore(consumeKeys: true);
             string? line = null;
-            if (isEnter || _readLineSB.Length > 0)
+            if (isEnter || readLineSB.Length > 0)
             {
-                line = _readLineSB.ToString();
-                _readLineSB.Clear();
+                line = readLineSB.ToString();
+                readLineSB.Clear();
             }
             return line;
         }
@@ -81,10 +79,10 @@ namespace Cosmos.System.IO
 
             // _availableKeys either contains a line that was already read,
             // or we need to read a new line from stdin.
-            bool freshKeys = _availableKeys.Count == 0;
-
+            bool freshKeys = availableKeys.Count == 0;
+            var outEncoding = global::System.Console.OutputEncoding;
             // Don't carry over chars from previous ReadLine call.
-            _readLineSB.Clear();
+            readLineSB.Clear();
             KeyEvent current;
             int currentCount = 0;
 
@@ -92,18 +90,17 @@ namespace Cosmos.System.IO
             {
                 while (true)
                 {
-                    current = freshKeys ? KeyboardManager.ReadKey() : _availableKeys.Pop();
+                    current = freshKeys ? KeyboardManager.ReadKey() : availableKeys.Pop();
 
                     if (!consumeKeys && current.Key != ConsoleKeyEx.Backspace) // backspace is the only character not written out below.
                     {
-                        _tmpKeys.Push(current);
+                        tmpKeys.Push(current);
                     }
 
                     if (current.Key is ConsoleKeyEx.Enter or ConsoleKeyEx.NumEnter)
                     {
                         if (freshKeys)
                         {
-                            //Global.Console.UpdateCursorFromCache();
                             global::System.Console.WriteLine();
                         }
                         return true;
@@ -114,34 +111,18 @@ namespace Cosmos.System.IO
                     {
                         case ConsoleKeyEx.Backspace:
                             {
-                                bool removed = false;
-                                if (consumeKeys)
-                                {
-                                    int len = _readLineSB.Length;
-                                    if (len > 0)
-                                    {
-                                        removed = true;
-                                    }
-                                }
-                                else
-                                {
-                                    removed = _tmpKeys.TryPop(out _);
-                                }
+                                bool removed = consumeKeys ? readLineSB.Length > 0 : tmpKeys.TryPop(out _);
 
                                 if (removed && freshKeys && currentCount > 0)
                                 {
                                     currentCount--;
-                                    _readLineSB.Remove(currentCount, 1);
-                                    //_readLineSB[currentCount] = '\0';
-                                    //var tempX = Global.Console.X;
-
                                     Global.Console.X--;
+                                    readLineSB.Remove(currentCount, 1);
 
                                     //Move characters to the left
                                     /* We write directly to the TextScreen to only update console cursor once */
-                                    Global.Console.Write(encoding.GetBytes(_readLineSB.ToString(currentCount, _readLineSB.Length - currentCount)));
-                                    Global.Console.Write(encoding.GetBytes("\0")[0]);
-                                    //Global.Console.X = tempX - 1;
+                                    Global.Console.Write(outEncoding.GetBytes(readLineSB.ToString(currentCount, readLineSB.Length - currentCount)));
+                                    Global.Console.Write(outEncoding.GetBytes("\0")[0]);
                                 }
                                 continue;
                             }
@@ -154,7 +135,7 @@ namespace Cosmos.System.IO
                             }
                             continue;
                         case ConsoleKeyEx.RightArrow:
-                            if (currentCount < _readLineSB.Length)
+                            if (currentCount < readLineSB.Length)
                             {
                                 Global.Console.X++;
                                 currentCount++;
@@ -168,21 +149,21 @@ namespace Cosmos.System.IO
                     }
 
                     //Write the character to the screen
-                    if (currentCount == _readLineSB.Length)
+                    if (currentCount == readLineSB.Length)
                     {
-                        _readLineSB.Append(current.KeyChar);
+                        readLineSB.Append(current.KeyChar);
 
                         global::System.Console.Write(current.KeyChar);
                         currentCount++;
                     }
                     else
                     {
-                        _readLineSB.Insert(currentCount, current.KeyChar);
+                        readLineSB.Insert(currentCount, current.KeyChar);
 
                         //Shift the characters to the right
                         /* We write directly to the TextScreen to only update console cursor once */
-                        Global.Console.Write(encoding.GetBytes(_readLineSB.ToString(currentCount, _readLineSB.Length - currentCount)));
-                        Global.Console.X -= _readLineSB.Length - currentCount - 1;
+                        Global.Console.Write(outEncoding.GetBytes(readLineSB.ToString(currentCount, readLineSB.Length - currentCount)));
+                        Global.Console.X -= readLineSB.Length - currentCount - 1;
                         currentCount++;
                     }
                 }
@@ -190,9 +171,9 @@ namespace Cosmos.System.IO
             finally
             {
                 // If we're not consuming the read input, make the keys available for a future read
-                while (_tmpKeys.Count > 0)
+                while (tmpKeys.Count > 0)
                 {
-                    _availableKeys.Push(_tmpKeys.Pop());
+                    availableKeys.Push(tmpKeys.Pop());
                 }
             }
         }
@@ -211,15 +192,15 @@ namespace Cosmos.System.IO
         public override int Peek()
         {
             // If there aren't any keys in our processed keys stack, read a line to populate it.
-            if (_availableKeys.Count == 0)
+            if (availableKeys.Count == 0)
             {
                 ReadLineCore(consumeKeys: false);
             }
 
             // Now if there are keys, use the first.
-            if (_availableKeys.Count > 0)
+            if (availableKeys.Count > 0)
             {
-                KeyEvent keyInfo = _availableKeys.Peek();
+                KeyEvent keyInfo = availableKeys.Peek();
                 if (!IsEol(keyInfo.KeyChar))
                 {
                     return keyInfo.KeyChar;
@@ -240,12 +221,12 @@ namespace Cosmos.System.IO
             }
 
             // Don't read a new line if there are remaining characters in the StringBuilder.
-            if (_readLineSB.Length == 0)
+            if (readLineSB.Length == 0)
             {
                 bool isEnter = ReadLineCore(consumeKeys: true);
                 if (isEnter)
                 {
-                    _readLineSB.Append('\n');
+                    readLineSB.Append('\n');
                 }
             }
 
@@ -253,7 +234,7 @@ namespace Cosmos.System.IO
             Encoder encoder = encoding.GetEncoder();
             int bytesUsedTotal = 0;
             int charsUsedTotal = 0;
-            foreach (ReadOnlyMemory<char> chunk in _readLineSB.GetChunks())
+            foreach (ReadOnlyMemory<char> chunk in readLineSB.GetChunks())
             {
                 encoder.Convert(chunk.Span, buffer, flush: false, out int charsUsed, out int bytesUsed, out bool completed);
                 buffer = buffer.Slice(bytesUsed);
@@ -265,7 +246,7 @@ namespace Cosmos.System.IO
                     break;
                 }
             }
-            _readLineSB.Remove(0, charsUsedTotal);
+            readLineSB.Remove(0, charsUsedTotal);
             return bytesUsedTotal;
         }
 
