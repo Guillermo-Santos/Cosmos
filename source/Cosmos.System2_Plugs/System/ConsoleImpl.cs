@@ -29,9 +29,40 @@ namespace Cosmos.System_Plugs.System
 
         public static int WindowTop => throw new NotImplementedException("Not implemented: WindowTop");
 
-        public static Encoding OutputEncoding => consoleOutputEncoding;
+        public static Encoding OutputEncoding
+        {
+            get => consoleOutputEncoding;
+            set
+            {
+                ArgumentNullException.ThrowIfNull(value);
 
-        public static Encoding InputEncoding => consoleInputEncoding;
+                if (@out != null && !IsOutputRedirected)
+                {
+                    @out.Flush();
+                    @out = null;
+                }
+
+                if (err != null && !IsErrorRedirected)
+                {
+                    err.Flush();
+                    err = null;
+                }
+
+                consoleOutputEncoding = (Encoding)value.Clone();
+            }
+        }
+
+        public static Encoding InputEncoding
+        {
+            get => consoleInputEncoding;
+            set
+            {
+                ArgumentNullException.ThrowIfNull(value);
+
+                consoleInputEncoding = (Encoding)value.Clone();
+                @in = null;
+            }
+        }
 
         public static bool KeyAvailable => KeyboardManager.KeyAvailable;
 
@@ -224,11 +255,11 @@ namespace Cosmos.System_Plugs.System
 
         public static TextWriter Error => err ??= CreateOutputWriter(OpenStandardError());
 
-        public static bool IsOutputRedirected => Cosmos.System.Console.IsStdOutRedirected();
+        public static bool IsOutputRedirected => isOutputRedirected ??= Cosmos.System.Console.IsStdOutRedirected();
 
-        public static bool IsInputRedirected => Cosmos.System.Console.IsStdInRedirected();
+        public static bool IsInputRedirected => isInputRedirected ??= Cosmos.System.Console.IsStdInRedirected();
 
-        public static bool IsErrorRedirected => Cosmos.System.Console.IsStdErrorRedirected();
+        public static bool IsErrorRedirected => isErrorRedirected ??= Cosmos.System.Console.IsStdErrorRedirected();
         #endregion
 
         #region Methods
@@ -243,18 +274,21 @@ namespace Cosmos.System_Plugs.System
             ArgumentNullException.ThrowIfNull(newIn, nameof(newIn));
             newIn = SyncTextReader.GetSynchronizedTextReader(newIn);
             @in = newIn;
+            isInputRedirected = Cosmos.System.Console.IsStdInRedirected();
         }
 
         public static void SetOut(TextWriter newOut)
         {
             ArgumentNullException.ThrowIfNull(newOut, nameof(newOut));
             @out = newOut;
+            isOutputRedirected = Cosmos.System.Console.IsStdOutRedirected();
         }
 
         public static void SetError(TextWriter newError)
         {
             ArgumentNullException.ThrowIfNull(newError, nameof(newError));
             err = newError;
+            isErrorRedirected = Cosmos.System.Console.IsStdErrorRedirected();
         }
 
         public static TextReader GetOrCreateReader() => Global.Console.GetOrCreateReader(@in is null);
@@ -392,6 +426,9 @@ namespace Cosmos.System_Plugs.System
         private static TextWriter? @out;
         private static TextWriter? err;
         private static TextReader? @in;
+        private static bool? isInputRedirected;
+        private static bool? isOutputRedirected;
+        private static bool? isErrorRedirected;
         private static Encoding consoleOutputEncoding = Encoding.ASCII;
         private static Encoding consoleInputEncoding = Encoding.ASCII;
         private static ConsoleColor foreGround = ConsoleColor.White;
