@@ -101,7 +101,15 @@ namespace Cosmos.System.IO
                     {
                         if (freshKeys)
                         {
-                            global::System.Console.WriteLine();
+                            /* Do a 'WriteLine' */
+                            Global.Console.CachedY++;
+                            Global.Console.CachedX = 0;
+                            if (Global.Console.CachedY == Global.Console.mText.Rows)
+                            {
+                                Global.Console.mText.ScrollUp();
+                                Global.Console.CachedY--;
+                            }
+                            Global.Console.UpdateCursorFromCache();
                         }
                         return true;
                     }
@@ -172,7 +180,8 @@ namespace Cosmos.System.IO
                     {
                         readLineSB.Append(current.KeyChar);
 
-                        global::System.Console.Write(current.KeyChar);
+                        Global.Console.Write(outEncoding.GetBytes(new char[1] { current.KeyChar })[0]);
+                        Global.Console.X++;
                         currentCount++;
                     }
                     else
