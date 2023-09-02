@@ -92,7 +92,7 @@ namespace Cosmos.System.IO
                 {
                     current = freshKeys ? KeyboardManager.ReadKey() : availableKeys.Pop();
 
-                    if (!consumeKeys && current.Key != ConsoleKeyEx.Backspace) // backspace is the only character not written out below.
+                    if (!consumeKeys && current.Key is not ConsoleKeyEx.Backspace or ConsoleKeyEx.Delete) // backspace and delete are the only characters not written out below.
                     {
                         tmpKeys.Push(current);
                     }
@@ -109,6 +109,23 @@ namespace Cosmos.System.IO
                     //Check for "special" keys
                     switch (current.Key)
                     {
+                        case ConsoleKeyEx.Delete:
+                            {
+                                bool removed = consumeKeys ? readLineSB.Length > currentCount : availableKeys.TryPop(out _);
+
+                                if (removed && freshKeys)
+                                {
+                                    readLineSB.Remove(currentCount, 1);
+
+                                    //Move characters to the left
+                                    /* We write directly to the TextScreen to only update console cursor once */
+                                    Global.Console.Write(outEncoding.GetBytes(readLineSB.ToString(currentCount, readLineSB.Length - currentCount)));
+                                    Global.Console.Write(outEncoding.GetBytes("\0")[0]);
+                                    Global.Console.CachedX = Global.Console.X;
+                                    Global.Console.CachedY = Global.Console.Y;
+                                }
+                                continue;
+                            }
                         case ConsoleKeyEx.Backspace:
                             {
                                 bool removed = consumeKeys ? readLineSB.Length > 0 : tmpKeys.TryPop(out _);
@@ -123,6 +140,8 @@ namespace Cosmos.System.IO
                                     /* We write directly to the TextScreen to only update console cursor once */
                                     Global.Console.Write(outEncoding.GetBytes(readLineSB.ToString(currentCount, readLineSB.Length - currentCount)));
                                     Global.Console.Write(outEncoding.GetBytes("\0")[0]);
+                                    Global.Console.CachedX = Global.Console.X;
+                                    Global.Console.CachedY = Global.Console.Y;
                                 }
                                 continue;
                             }
@@ -158,13 +177,15 @@ namespace Cosmos.System.IO
                     }
                     else
                     {
+                        Global.Console.X++;
+                        currentCount++;
                         readLineSB.Insert(currentCount, current.KeyChar);
-
+ 
                         //Shift the characters to the right
                         /* We write directly to the TextScreen to only update console cursor once */
                         Global.Console.Write(outEncoding.GetBytes(readLineSB.ToString(currentCount, readLineSB.Length - currentCount)));
-                        Global.Console.X -= readLineSB.Length - currentCount - 1;
-                        currentCount++;
+                        Global.Console.CachedY = Global.Console.Y;
+                        Global.Console.CachedX = Global.Console.X;
                     }
                 }
             }
