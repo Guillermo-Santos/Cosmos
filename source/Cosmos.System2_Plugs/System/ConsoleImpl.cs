@@ -61,6 +61,7 @@ namespace Cosmos.System_Plugs.System
 
                 consoleInputEncoding = (Encoding)value.Clone();
                 @in = null;
+                GetConsole().ResetInternalStdIn();
             }
         }
 

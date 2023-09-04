@@ -228,6 +228,12 @@ namespace Cosmos.System
             Write(aChar, cX, cY);
         }
 
+        /// <summary>
+        /// Write char to the console.
+        /// </summary>
+        /// <param name="aChar">A char to write.</param>
+        /// <param name="left">X axis position.</param>
+        /// <param name="top">Y axis position.</param>
         public void Write(byte aChar, int left, int top)
         {
             mText[left, top] = aChar;
@@ -353,7 +359,7 @@ namespace Cosmos.System
 
         public TextReader GetOrCreateReader(bool firstTime = false)
         {
-            // TODO: Is this really needed for a OS? StdInReader will always be the Standard Input anyway
+            // TODO: Is this really needed for an OS? StdInReader will always be the Standard Input anyway
             if (!firstTime && global::System.Console.IsInputRedirected)
             {
                 var inputStream = OpenStandardInput();
@@ -399,6 +405,11 @@ namespace Cosmos.System
                 global::System.Console.Write(keyInfo.KeyChar);
             }
             return keyInfo;
+        }
+
+        public void ResetInternalStdIn()
+        {
+            _stdInReader = null;
         }
 
         internal SyncTextReader StdInReader => _stdInReader ??= SyncTextReader
