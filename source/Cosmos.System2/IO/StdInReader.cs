@@ -18,11 +18,13 @@ namespace Cosmos.System.IO
         private readonly Stack<KeyEvent> tmpKeys = new Stack<KeyEvent>(); // temporary working stack; should be empty outside of ReadLine
         private readonly Stack<KeyEvent> availableKeys = new Stack<KeyEvent>(); // a queue of already processed key infos available for reading
         private readonly Encoding encoding;
+        private byte[] lineFeed;
 
         internal StdInReader(Encoding encoding)
         {
             readLineSB = new StringBuilder();
             this.encoding = encoding;
+            lineFeed = encoding.GetBytes(Environment.NewLine);
         }
 
         /// <summary>
@@ -102,13 +104,7 @@ namespace Cosmos.System.IO
                         if (freshKeys)
                         {
                             /* Do a 'WriteLine' */
-                            Global.Console.CachedY++;
-                            Global.Console.CachedX = 0;
-                            if (Global.Console.CachedY == Global.Console.mText.Rows)
-                            {
-                                Global.Console.mText.ScrollUp();
-                                Global.Console.CachedY--;
-                            }
+                            Global.Console.Write(lineFeed);
                             Global.Console.UpdateCursorFromCache();
                         }
                         return true;
