@@ -51,6 +51,9 @@ namespace Cosmos.System_Plugs.System
                 consoleOutputEncoding = (Encoding)value.Clone();
             }
         }
+                consoleOutputEncoding = value;
+            }
+        }
 
         public static Encoding InputEncoding
         {
@@ -61,6 +64,7 @@ namespace Cosmos.System_Plugs.System
 
                 consoleInputEncoding = (Encoding)value.Clone();
                 @in = null;
+                consoleInputEncoding = value;
             }
         }
 
