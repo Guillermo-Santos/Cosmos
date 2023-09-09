@@ -12,7 +12,7 @@ namespace Cosmos.System
     //Modified to be used on cosmos
     public partial class Console
     {
-        internal class CosmosConsoleStream : ConsoleStream
+        internal sealed class CosmosConsoleStream : ConsoleStream
         {
             internal CosmosConsoleStream(FileAccess access) : base(access)
             {
@@ -20,7 +20,6 @@ namespace Cosmos.System
 
             public override void Flush() => Global.Console.UpdateCursorFromCache();
             public override void Write(ReadOnlySpan<byte> buffer) => Global.Console.Write(buffer);
-
             public override int Read(Span<byte> buffer) => Global.Console.StdInReader.ReadLine(buffer);
         }
     }

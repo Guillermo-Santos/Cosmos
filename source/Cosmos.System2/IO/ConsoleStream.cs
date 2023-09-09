@@ -11,7 +11,7 @@ namespace Cosmos.System.IO
     // Provides the platform-agnostic functionality for streams used as console input and output.
     // Platform-specific implementations derive from ConsoleStream to implement Read and Write
     // (and optionally Flush), as well as any additional ctor/Dispose logic necessary.
-    internal abstract class ConsoleStream : Stream
+    public abstract class ConsoleStream : Stream
     {
         private bool _canRead, _canWrite;
 
