@@ -50,6 +50,13 @@ namespace Cosmos.System
 
                     mX = Cols - 1;
                 }
+                else if (value >= mText.Cols)
+                {
+                    cY = mY;
+                    DoLineFeed();
+                    mY = cY;
+                    mX = cX;
+                }
                 else
                 {
 
@@ -74,11 +81,16 @@ namespace Cosmos.System
                         cY--;
                     }
 
-                    cX = Rows - 1;
+                    cX = mText.Cols - 1;
+                }
+                else if(value >= mText.Cols)
+                {
+                    DoLineFeed();
+                    //UpdateCursorFromCache();
                 }
                 else
                 {
-
+                
                     cX = value;
                 }
             }
@@ -101,7 +113,19 @@ namespace Cosmos.System
             get => mY;
             set
             {
-                mY = value < 0 ? 0 : value;
+                if (value < 0)
+                {
+                    mY = 0;
+                }
+                else if (value >= mText.Rows)
+                {
+                    cY = mText.Rows - 1;
+                    DoLineFeed();
+                }
+                else
+                {
+                    cY = value;
+                }
                 UpdateCursor();
             }
         }
@@ -109,7 +133,23 @@ namespace Cosmos.System
         public int CachedY
         {
             get => cY;
-            set => cY = value < 0 ? 0 : value;
+            set
+            {
+                if (value < 0)
+                {
+                    cY = 0;
+                }
+                else if (value >= mText.Rows)
+                {
+                    cY = mText.Rows - 1;
+                    DoLineFeed();
+                    UpdateCursorFromCache();
+                }
+                else
+                {
+                    cY = value;
+                }
+            }
         }
 
         /// <summary>
@@ -179,7 +219,7 @@ namespace Cosmos.System
         {
             mX = cX;
             mY = cY;
-            UpdateCursor();
+            mText.SetCursorPos(mX, mY);
         }
 
         /// <summary>
@@ -194,7 +234,6 @@ namespace Cosmos.System
                 mText.ScrollUp();
                 cY--;
             }
-            //UpdateCursor();
         }
 
         /// <summary>
@@ -357,27 +396,9 @@ namespace Cosmos.System
                     && streamWriter.BaseStream is Console.CosmosConsoleStream);
         }
 
-        public TextReader GetOrCreateReader(bool firstTime = false)
+        public TextReader GetOrCreateReader()
         {
-            // TODO: Is this really needed for an OS? StdInReader will always be the Standard Input anyway
-            if (!firstTime && global::System.Console.IsInputRedirected)
-            {
-                var inputStream = OpenStandardInput();
-                return SyncTextReader.GetSynchronizedTextReader(
-                    inputStream == Stream.Null
-                    ? StreamReader.Null
-                    : new StreamReader(
-                        stream: inputStream,
-                        encoding: global::System.Console.InputEncoding,
-                        detectEncodingFromByteOrderMarks: false,
-                        bufferSize: ReadBufferSize,
-                        leaveOpen: true
-                        ));
-            }
-            else
-            {
-                return StdInReader;
-            }
+            return StdInReader;
         }
         public TextWriter CreateOutputWriter(Stream outputStream) => outputStream == Stream.Null ?
                TextWriter.Null :
@@ -393,6 +414,7 @@ namespace Cosmos.System
         {
             if (global::System.Console.IsInputRedirected)
             {
+                // The biggest lie i have seen in my life...
                 throw new InvalidOperationException("Can not read console keys as input is redirected.");
             }
 
