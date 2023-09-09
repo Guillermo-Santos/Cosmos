@@ -264,9 +264,36 @@ namespace Cosmos.System_Plugs.System
         #endregion
 
         #region Methods
+        public static Stream OpenStandardInput(int bufferSize)
+        {
+            // We do not really use bufferSize, but this method should still be plugged.
+            if(bufferSize < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bufferSize), "Buffer Size must be non negative.");
+            }
+            return Global.Console.OpenStandardInput();
+        }
         public static Stream OpenStandardInput() => Global.Console.OpenStandardInput();
-
+        public static Stream OpenStandardOutput(int bufferSize)
+        {
+            // We do not really use bufferSize, but this method should still be plugged.
+            if (bufferSize < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bufferSize), "Buffer Size must be non negative.");
+            }
+            return Global.Console.OpenStandardOutput();
+        }
         public static Stream OpenStandardOutput() => Global.Console.OpenStandardOutput();
+        public static Stream OpenStandardError(int bufferSize)
+        {
+            // We do not really use bufferSize, but this method should still be plugged.
+            if (bufferSize < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bufferSize), "Buffer Size must be non negative.");
+            }
+
+            return Global.Console.OpenStandardError();
+        }
 
         public static Stream OpenStandardError() => Global.Console.OpenStandardError();
 
@@ -292,7 +319,7 @@ namespace Cosmos.System_Plugs.System
             isErrorRedirected = Cosmos.System.Console.IsStdErrorRedirected();
         }
 
-        public static TextReader GetOrCreateReader() => Global.Console.GetOrCreateReader(@in is null);
+        public static TextReader GetOrCreateReader() => Global.Console.GetOrCreateReader();
 
         public static TextWriter CreateOutputWriter(Stream stream) => Global.Console.CreateOutputWriter(stream);
 
