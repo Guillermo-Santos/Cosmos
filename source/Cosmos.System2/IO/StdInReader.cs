@@ -1,34 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
+using Cosmos.System.Keyboard;
 
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-
 #nullable enable
 namespace Cosmos.System.IO
 {
-
-    internal static class KeyEventHelpers
-    {
-        internal static ConsoleKeyInfo ToConsoleKeyInfo(this KeyEvent keyEvent)
-        {
-            //TODO: Plug HasFlag and use the next 3 lines instead of the 3 following lines
-
-            //bool xShift = key.Modifiers.HasFlag(ConsoleModifiers.Shift);
-            //bool xAlt = key.Modifiers.HasFlag(ConsoleModifiers.Alt);
-            //bool xControl = key.Modifiers.HasFlag(ConsoleModifiers.Control);
-
-            bool xShift = (keyEvent.Modifiers & ConsoleModifiers.Shift) == ConsoleModifiers.Shift;
-            bool xAlt = (keyEvent.Modifiers & ConsoleModifiers.Alt) == ConsoleModifiers.Alt;
-            bool xControl = (keyEvent.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control;
-
-            return new ConsoleKeyInfo(keyEvent.KeyChar, keyEvent.Key.ToConsoleKey(), xShift, xAlt, xControl);
-        }
-    }
 
     // Heavily modified to be used on cosmos
     internal sealed class StdInReader : TextReader
@@ -89,7 +70,6 @@ namespace Cosmos.System.IO
             {
                 while (true)
                 {
-                    Global.Debugger.Send($"Cursor Position: ({Global.Console.CachedX},{Global.Console.CachedY})");
                     current = freshKeys ? KeyboardManager.ReadKey() : availableKeys.Pop();
 
                     if (!consumeKeys && current.Key is not ConsoleKeyEx.Backspace or ConsoleKeyEx.Delete) // backspace and delete are the only characters not written out below.
@@ -111,23 +91,6 @@ namespace Cosmos.System.IO
                     //Check for "special" keys
                     switch (current.Key)
                     {
-                        case ConsoleKeyEx.Delete:
-                            {
-                                bool removed = consumeKeys ? readLineSB.Length > currentCount : availableKeys.TryPop(out _);
-
-                                if (removed && freshKeys)
-                                {
-                                    readLineSB.Remove(currentCount, 1);
-
-                                    //Move characters to the left
-                                    /* We write directly to the TextScreen to only update console cursor once */
-                                    Global.Console.Write(encoding.GetBytes(readLineSB.ToString(currentCount, readLineSB.Length - currentCount)));
-                                    Global.Console.Write(encoding.GetBytes("\0")[0]);
-                                    Global.Console.CachedX = Global.Console.X;
-                                    Global.Console.CachedY = Global.Console.Y;
-                                }
-                                continue;
-                            }
                         case ConsoleKeyEx.Backspace:
                             {
                                 bool removed = consumeKeys ? readLineSB.Length > 0 : tmpKeys.TryPop(out _);
@@ -147,7 +110,23 @@ namespace Cosmos.System.IO
                                 }
                                 continue;
                             }
+                        case ConsoleKeyEx.Delete:
+                            {
+                                bool removed = consumeKeys ? readLineSB.Length > currentCount : availableKeys.TryPop(out _);
 
+                                if (removed && freshKeys)
+                                {
+                                    /* No Cursor Updates are needed */
+                                    readLineSB.Remove(currentCount, 1);
+
+                                    //Move characters to the left
+                                    Global.Console.Write(encoding.GetBytes(readLineSB.ToString(currentCount, readLineSB.Length - currentCount)));
+                                    Global.Console.Write(encoding.GetBytes("\0")[0]);
+                                    Global.Console.CachedX = Global.Console.X;
+                                    Global.Console.CachedY = Global.Console.Y;
+                                }
+                                continue;
+                            }
                         case ConsoleKeyEx.LeftArrow:
                             if (currentCount > 0)
                             {
@@ -175,7 +154,7 @@ namespace Cosmos.System.IO
                         readLineSB.Append(current.KeyChar);
 
                         Global.Console.Write(encoding.GetBytes(new char[1] { current.KeyChar })[0]);
-                        Global.Console.X++;
+                        Global.Console.UpdateCursorFromCache();
                         currentCount++;
                     }
                     else
