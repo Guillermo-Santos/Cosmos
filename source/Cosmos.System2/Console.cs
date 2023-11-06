@@ -418,8 +418,6 @@ namespace Cosmos.System
                 throw new InvalidOperationException("Can not read console keys as input is redirected.");
             }
 
-            global::System.Console.WriteLine("check passed");
-
             ConsoleKeyInfo keyInfo = StdInReader.ReadKey(out bool previouslyProcessed);
 
             if (!intercept && !previouslyProcessed && keyInfo.KeyChar != '\0')
