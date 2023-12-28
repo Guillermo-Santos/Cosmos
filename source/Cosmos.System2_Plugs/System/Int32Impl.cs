@@ -16,36 +16,32 @@ namespace Cosmos.System_Plugs.System
             if (format.Equals("X"))
             {
                 string result = "";
+                int value = aThis;
 
-                if(aThis == 0)
+                while (value != 0)
                 {
-                    result = "0";
-                }
-
-                while (aThis != 0)
-                {
-                    if (aThis % 16 < 10)
+                    int remainder = value % 16;
+                    if (remainder < 10)
                     {
-                        result = aThis % 16 + result;
+                        result = remainder + result;
                     }
                     else
                     {
-                        string temp = "";
-
-                        switch (aThis % 16)
-                        {
-                            case 10: temp = "A"; break;
-                            case 11: temp = "B"; break;
-                            case 12: temp = "C"; break;
-                            case 13: temp = "D"; break;
-                            case 14: temp = "E"; break;
-                            case 15: temp = "F"; break;
-                        }
-
+                        char temp = (char)('A' + (remainder - 10));
                         result = temp + result;
                     }
 
-                    aThis /= 16;
+                    value /= 16;
+                }
+
+                return string.IsNullOrEmpty(result) ? "0" : result;
+            }
+            else if (format.StartsWith("D") && format.Length > 1 && int.TryParse(format.AsSpan(1), out int number))
+            {
+                string result = aThis.ToString();
+                while (result.Length < number)
+                {
+                    result = '0' + result;
                 }
 
                 return result;
@@ -55,6 +51,7 @@ namespace Cosmos.System_Plugs.System
                 return aThis.ToString();
             }
         }
+
 
         public static string ToString(ref int aThis, IFormatProvider provider) => ToString(ref aThis);
 
