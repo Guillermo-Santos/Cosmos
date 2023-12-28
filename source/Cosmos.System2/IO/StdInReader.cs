@@ -15,8 +15,8 @@ namespace Cosmos.System.IO
     internal sealed class StdInReader : TextReader
     {
         private readonly StringBuilder readLineSB; // SB that holds readLine output.  This is a field simply to enable reuse; it's only used in ReadLine.
-        private readonly Stack<KeyEvent> tmpKeys = new Stack<KeyEvent>(); // temporary working stack; should be empty outside of ReadLine
-        private readonly Stack<KeyEvent> availableKeys = new Stack<KeyEvent>(); // a queue of already processed key infos available for reading
+        private readonly Stack<KeyEvent> tmpKeys = new(); // temporary working stack; should be empty outside of ReadLine
+        private readonly Stack<KeyEvent> availableKeys = new(); // a queue of already processed key infos available for reading
         private readonly Encoding encoding;
 
         internal StdInReader(Encoding encoding)
@@ -41,7 +41,6 @@ namespace Cosmos.System.IO
             previouslyProcessed = false;
             return KeyboardManager.ReadKey().ToConsoleKeyInfo();
         }
-
         public override string? ReadLine()
         {
             bool isEnter = ReadLineCore(consumeKeys: true);
@@ -53,7 +52,6 @@ namespace Cosmos.System.IO
             }
             return line;
         }
-
         public bool ReadLineCore(bool consumeKeys)
         {
 
@@ -191,7 +189,6 @@ namespace Cosmos.System.IO
                 return -1;
             }
         }
-
         public override int Peek()
         {
             // If there aren't any keys in our processed keys stack, read a line to populate it.
@@ -213,7 +210,6 @@ namespace Cosmos.System.IO
             // EOL
             return -1;
         }
-
         private static bool IsEol(char keyChar) => keyChar != '\0';
         internal int ReadLine(Span<byte> buffer)
         {
