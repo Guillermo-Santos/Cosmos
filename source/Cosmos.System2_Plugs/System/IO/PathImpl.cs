@@ -225,7 +225,7 @@ namespace Cosmos.System_Plugs.System.IO
 
         public static string GetRandomFileName()
         {
-            return "random.tmp";
+            return $"{Guid.NewGuid()}.tmp";
         }
 
         public static string GetTempFileName()
