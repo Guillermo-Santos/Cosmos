@@ -307,6 +307,12 @@ namespace Cosmos.System
 
             for (int i = 0; i < aText.Length; i++)
             {
+                if (aText[i] == '\0')
+                {
+                    // Skipping Null chars given by StreamWriter
+                    continue;
+                }
+
                 switch (aText[i])
                 {
                     case LineFeed:
